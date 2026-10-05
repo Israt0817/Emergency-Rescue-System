@@ -8,10 +8,19 @@ from config.settings import DEFAULT_LOCATION, THEMES, CITY_COORDINATES
 
 @st.cache_data(show_spinner=False)
 def load_graph_network(location_name=DEFAULT_LOCATION):
-    base_lat, base_lon = CITY_COORDINATES.get(location_name, (23.777172, 90.399452))
+    # 1. Resolve location name to coordinates first (handles custom worldwide text search)
+    coords = None
+    if location_name in CITY_COORDINATES:
+        coords = CITY_COORDINATES[location_name]
+    else:
+        # Dynamically geocode any searched place worldwide using Nominatim
+        coords = geocode_place_name(location_name)
+
+    base_lat, base_lon = coords if coords else (23.777172, 90.399452)
 
     try:
-        ox.settings.timeout = 5
+        ox.settings.timeout = 10
+        # 2. Fetch graph using the resolved lat/lon point and radius
         G = ox.graph_from_point((base_lat, base_lon), dist=2000, network_type="drive")
     except Exception:
         grid = nx.grid_2d_graph(25, 25)
